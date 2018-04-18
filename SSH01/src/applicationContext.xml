@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+ xmlns:aop="http://www.springframework.org/schema/aop" 
+ xmlns:context="http://www.springframework.org/schema/context"
+  xmlns:tx="http://www.springframework.org/schema/tx" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://www.springframework.org/schema/beans
+   http://www.springframework.org/schema/beans/spring-beans-4.3.xsd 
+   http://www.springframework.org/schema/aop
+    http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+     http://www.springframework.org/schema/context
+      http://www.springframework.org/schema/context/spring-context-4.3.xsd 
+      http://www.springframework.org/schema/tx 
+      http://www.springframework.org/schema/tx/spring-tx-4.3.xsd ">
+<!-- 数据源配置传c3p0 -->
+<bean  id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+	<property name="driverClass" value="com.mysql.jdbc.Driver"></property>
+	<property name="jdbcUrl" value="jdbc:mysql://localhost:3306/ssh2?characterEncoding=UTF-8"></property>
+	<property name="user" value="root"></property>
+	<property name="password" value=""></property>
+</bean>
+<!--配置hibernate.cfg.xml来加载sessionFactory  -->
+<bean id="sessionFactory" class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+<!-- <property name="configLocation" value="classpath:hibernate.cfg.xml"></property> -->
+	<property name="dataSource" ref="dataSource"></property>
+	<property name="hibernateProperties">
+		<props>
+			<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+			<prop key="hibernate.show_sql">true</prop>
+		</props>
+	</property>
+	<!--配置映射文件hbm.xml  -->
+	<property name="mappingLocations" value="classpath:com/java/pojo/*.hbm.xml"/>
+
+</bean>
+<!--配置模板类，底层使用的就是session 第一种 -->
+<!-- <bean id="hibernateTemplate" class="org.springframework.orm.hibernate5.HibernateTemplate">
+	<property name="sessionFactory" ref="sessionFactory"/>
+</bean> -->
+<!--配置dao层 需要主要模板 第二种-->
+<bean id="userDao" class="com.java.dao.UserDaoImp2">
+	<!-- <property name="hibernateTemplate" ref="hibernateTemplate"></property> -->
+	<property name="sessionFactory" ref="sessionFactory"></property>
+</bean>
+<!-- service层，需要注入dao -->
+<bean id="userService" class="com.java.service.UserServiceImp">
+	<property name="userDao" ref="userDao"></property>
+</bean>
+<!-- 配置声明式事务，统一管理事务的提交和回滚，使用AOP编程思想 -->
+<!-- 事务管理器 -->
+<bean id="txManager" class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+	<property name="sessionFactory" ref="sessionFactory"></property>	
+</bean>
+<!-- 声明式事务2.配置事务详情 -->
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<tx:attributes>
+			<tx:method name="addUser" />
+		</tx:attributes>
+	</tx:advice>
+	<!-- 配置aop切面语法 -->
+	<aop:config>
+		<aop:advisor advice-ref="txAdvice" pointcut="execution(* com.java.service.*.*(..))"/>
+	</aop:config>
+</beans>
